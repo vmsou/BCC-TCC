@@ -1,18 +1,20 @@
 FROM ubuntu:22.04
 
-RUN  apt-get update \
-  && apt-get install -y wget \
-  && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && apt-get install -y wget default-jre
+RUN apt-get update
+RUN apt-get install -y wget
+RUN apt-get install -y sudo
+RUN [ -d /usr/lib/jvm/java-11-openjdk-amd64/ ] || apt-get install -y wget default-jre
+RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt
 
 # Instalar: Hadoop
-RUN wget https://dlcdn.apache.org/hadoop/common/hadoop-3.4.0/hadoop-3.4.0.tar.gz && \
+RUN [ -d /opt/hadoop ] || ( \
+    wget https://dlcdn.apache.org/hadoop/common/hadoop-3.4.0/hadoop-3.4.0.tar.gz && \
     tar -xzf hadoop-3.4.0.tar.gz && \
     rm hadoop-3.4.0.tar.gz && \
-    mv ./hadoop-3.4.0 ./hadoop
+    mv ./hadoop-3.4.0 ./hadoop \
+)
 
 # Configurar: Hadoop
 RUN mkdir -p /opt/hdfs/datanode
