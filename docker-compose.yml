@@ -1,39 +1,53 @@
-version: "1"
+version: '3'
 services:
-
   namenode:
-    image: apache/hadoop:3.3.6
+    image: nids/master:1.0
+    build: docker/master
+    pull_policy: never
+
     hostname: namenode
     container_name: nids-master
-    volumes:
-      - ./Makefile:/opt/hadoop/Makefile
+
     env_file:
       - ./config
+
     environment:
       ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
+
     ports:
       - 9870:9870
-    command: bash -c "sudo yum install -y make && sudo make install-spark && make install-python3 && make start-namenode"
-    # command: ["hdfs", "namenode"]
+
+    command: ["hdfs", "namenode"]
 
   datanode1:
+    image: nids/worker:1.0
+    build: docker/worker
+    pull_policy: never
+
     container_name: nids-worker1
-    image: apache/hadoop:3.3.6
     command: ["hdfs", "datanode"]
     env_file:
       - ./config
 
   datanode2:
+    image: nids/worker:1.0
+    build: docker/worker
+    pull_policy: never
+
     container_name: nids-worker2
-    image: apache/hadoop:3.3.6
     command: ["hdfs", "datanode"]
+
     env_file:
       - ./config
   
   datanode3:
+    image: nids/worker:1.0
+    build: docker/worker
+    pull_policy: never
+
     container_name: nids-worker3
-    image: apache/hadoop:3.3.6
     command: ["hdfs", "datanode"]
+
     env_file:
       - ./config
 
@@ -41,7 +55,7 @@ services:
     image: apache/hadoop:3.3.6
     hostname: resourcemanager
     container_name: nids-resourcemanager
-    command: ["yarn", "resourcemanager"]
+
     ports:
       - 8088:8088
     env_file:
@@ -49,9 +63,13 @@ services:
     volumes:
       - ./test.sh:/opt/test.sh
 
+    command: ["yarn", "resourcemanager"]
+
   nodemanager:
-    container_name: nids-nodemanager
     image: apache/hadoop:3.3.6
-    command: ["yarn", "nodemanager"]
+    container_name: nids-nodemanager
+
     env_file:
       - ./config
+
+    command: ["yarn", "nodemanager"]
