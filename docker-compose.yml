@@ -4,7 +4,7 @@ services:
   namenode:
     image: apache/hadoop:3.3.6
     hostname: namenode
-    container_name: master
+    container_name: nids-master
     volumes:
       - ./Makefile:/opt/hadoop/Makefile
     env_file:
@@ -17,14 +17,21 @@ services:
     # command: ["hdfs", "namenode"]
 
   datanode1:
-    container_name: worker1
+    container_name: nids-worker1
     image: apache/hadoop:3.3.6
     command: ["hdfs", "datanode"]
     env_file:
       - ./config
 
   datanode2:
-    container_name: worker2
+    container_name: nids-worker2
+    image: apache/hadoop:3.3.6
+    command: ["hdfs", "datanode"]
+    env_file:
+      - ./config
+  
+  datanode3:
+    container_name: nids-worker3
     image: apache/hadoop:3.3.6
     command: ["hdfs", "datanode"]
     env_file:
@@ -33,7 +40,7 @@ services:
   resourcemanager:
     image: apache/hadoop:3.3.6
     hostname: resourcemanager
-    container_name: resourcemanager
+    container_name: nids-resourcemanager
     command: ["yarn", "resourcemanager"]
     ports:
       - 8088:8088
@@ -43,7 +50,7 @@ services:
       - ./test.sh:/opt/test.sh
 
   nodemanager:
-    container_name: nodemanager
+    container_name: nids-nodemanager
     image: apache/hadoop:3.3.6
     command: ["yarn", "nodemanager"]
     env_file:

@@ -1,8 +1,8 @@
 install-spark:
 	sudo wget https://archive.apache.org/dist/spark/spark-3.5.0/spark-3.5.0-bin-hadoop3.tgz --no-check-certificate
-	mkdir /opt/spark
-	mv spark-3.5.0-bin-hadoop3.tgz /opt/spark/
-	tar -zxvf /opt/spark/spark-3.5.0-bin-hadoop3.tgz -C /opt/spark
+	tar -zxvf spark-3.5.0-bin-hadoop3.tgz
+	mv spark-3.5.0-bin-hadoop3 /opt/spark
+	rm spark-3.5.0-bin-hadoop3.tgz
 
 install-python3:
 	sudo yum install -y python3
