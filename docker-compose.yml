@@ -1,0 +1,50 @@
+version: "1"
+services:
+
+  namenode:
+    image: apache/hadoop:3.3.6
+    hostname: namenode
+    container_name: master
+    volumes:
+      - ./Makefile:/opt/hadoop/Makefile
+    env_file:
+      - ./config
+    environment:
+      ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
+    ports:
+      - 9870:9870
+    command: bash -c "sudo yum install -y make && sudo make install-spark && make install-python3 && make start-namenode"
+    # command: ["hdfs", "namenode"]
+
+  datanode1:
+    container_name: worker1
+    image: apache/hadoop:3.3.6
+    command: ["hdfs", "datanode"]
+    env_file:
+      - ./config
+
+  datanode2:
+    container_name: worker2
+    image: apache/hadoop:3.3.6
+    command: ["hdfs", "datanode"]
+    env_file:
+      - ./config
+
+  resourcemanager:
+    image: apache/hadoop:3.3.6
+    hostname: resourcemanager
+    container_name: resourcemanager
+    command: ["yarn", "resourcemanager"]
+    ports:
+      - 8088:8088
+    env_file:
+      - ./config
+    volumes:
+      - ./test.sh:/opt/test.sh
+
+  nodemanager:
+    container_name: nodemanager
+    image: apache/hadoop:3.3.6
+    command: ["yarn", "nodemanager"]
+    env_file:
+      - ./config
