@@ -1,0 +1,48 @@
+name: spark
+
+networks:
+  nids_network:
+    external: true
+
+services:
+  master:
+    pull_policy: never
+    build: ${PWD}/docker/spark
+    image: nids/spark
+
+    hostname: ${SPARK_MASTER_HOST}
+
+    environment:
+      - SPARK_MASTER_HOST=${SPARK_MASTER_HOST}
+      - SPARK_MODE=master
+
+    networks:
+      - nids_network
+
+    ports:
+      - ${SPARK_UI_PORT}:8080
+      - ${SPARK_MASTER_PORT}:7077
+
+    volumes:
+    - ${PWD}/infra/spark/apps/:/opt/bitnami/spark/apps/
+    - ${PWD}/infra/spark/conf/:/opt/bitnami/spark/conf/
+
+  worker:
+    image: nids/spark
+    pull_policy: never
+
+    depends_on:
+      - master
+
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://${SPARK_MASTER_HOST}:${SPARK_MASTER_PORT}
+      - SPARK_WORKER_MEMORY=2g
+      - SPARK_WORKER_CORES=2
+
+    volumes:
+    - ${PWD}/infra/spark/conf/:/opt/bitnami/spark/conf/
+    - ${PWD}/infra/spark/data/:/opt/bitnami/spark/data/
+
+    networks:
+      - nids_network

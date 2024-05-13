@@ -1,0 +1,56 @@
+name: kafka
+
+networks:
+  nids_network:
+    external: true
+
+services:
+  server:
+    hostname: ${KAFKA_SERVER_HOST}
+    image: 'bitnami/kafka:3.6.2'
+ 
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@${KAFKA_SERVER_HOST}:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+
+    networks:
+      - nids_network
+
+    ports:
+     - ${KAFKA_SERVER_PORT}:9092
+
+  producer:
+    pull_policy: never
+    build: ${PWD}/docker/kafka/producer
+    image: nids/producer
+
+    depends_on:
+      - server
+
+    networks:
+      - nids_network
+
+    volumes:
+      - ${PWD}/infra/kafka/producers:/usr/src/producers
+
+    command: python producers/csv_producer.py --servers ${KAFKA_SERVER_HOST}:${KAFKA_SERVER_PORT} --topic random_csv1
+
+  consumer:
+    image: 'bitnami/kafka:3.6.2'
+
+    depends_on:
+      - producer
+
+    networks:
+      - nids_network
+
+    volumes:
+      - ${PWD}/infra/kafka/config/:/opt/bitnami/kafka/config/
+
+    command: kafka-console-consumer.sh --bootstrap-server ${KAFKA_SERVER_HOST}:${KAFKA_SERVER_PORT} --topic random_csv1 --from-beginning
+

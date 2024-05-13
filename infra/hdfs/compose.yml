@@ -1,0 +1,45 @@
+name: hdfs
+
+networks:
+  nids_network:
+    external: true
+
+services:
+  namenode:
+    #pull_policy: never
+    #build: ${PWD}/docker/hdfs
+    image: apache/hadoop:3.3.6
+
+    hostname: ${HDFS_HOST}
+    # restart: always
+
+    environment:
+      ENSURE_NAMENODE_DIR: "/tmp/hadoop-hadoop/dfs/name"
+
+    volumes:
+      - ${PWD}/infra/hdfs/hadoop/:/opt/hadoop/etc/hadoop/
+
+    networks:
+      - nids_network
+
+    ports:
+      - ${HDFS_UI_PORT}:9870
+
+    command: hdfs namenode
+
+  datanode:
+    image: apache/hadoop:3.3.6
+
+    depends_on:
+      - namenode
+
+    #environment:
+    #  SERVICE_PRECONDITION: "${HDFS_HOST}:9870"
+
+    volumes:
+      - ${PWD}/infra/hdfs/hadoop/:/opt/hadoop/etc/hadoop/
+
+    networks:
+      - nids_network
+
+    command: hdfs datanode

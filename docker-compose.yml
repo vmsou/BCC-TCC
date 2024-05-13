@@ -1,75 +1,10 @@
-version: '3'
-services:
-  namenode:
-    image: nids/master:1.0
-    build: docker/master
-    pull_policy: never
+name: nids
 
-    hostname: namenode
-    container_name: nids-master
+networks:
+  nids_network:
+    external: true
 
-    env_file:
-      - ./config
-
-    environment:
-      ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
-
-    ports:
-      - 9870:9870
-
-    command: ["hdfs", "namenode"]
-
-  datanode1:
-    image: nids/worker:1.0
-    build: docker/worker
-    pull_policy: never
-
-    container_name: nids-worker1
-    command: ["hdfs", "datanode"]
-    env_file:
-      - ./config
-
-  datanode2:
-    image: nids/worker:1.0
-    build: docker/worker
-    pull_policy: never
-
-    container_name: nids-worker2
-    command: ["hdfs", "datanode"]
-
-    env_file:
-      - ./config
-  
-  datanode3:
-    image: nids/worker:1.0
-    build: docker/worker
-    pull_policy: never
-
-    container_name: nids-worker3
-    command: ["hdfs", "datanode"]
-
-    env_file:
-      - ./config
-
-  resourcemanager:
-    image: apache/hadoop:3.3.6
-    hostname: resourcemanager
-    container_name: nids-resourcemanager
-
-    ports:
-      - 8088:8088
-    env_file:
-      - ./config
-    volumes:
-      - ./test.sh:/opt/test.sh
-
-    command: ["yarn", "resourcemanager"]
-
-  nodemanager:
-    image: apache/hadoop:3.3.6
-    container_name: nids-nodemanager
-
-    env_file:
-      - ./config
-
-    command: ["yarn", "nodemanager"]
+include:
+  - infra/hdfs/compose.yml
+  - infra/spark/compose.yml
+  - infra/kafka/compose.yml
