@@ -2,38 +2,44 @@
 
 ## Quick Start
 
+
+### Deploy
 To deploy the NIDS cluster, run:
 ```bash
-docker-compose up -d
+make compose-up workers=3 datanodes=3
+```
+or
+```bash
+docker-compose up --scale datanode=3 --scale worker=3 -d
 ```
 
 ### Interface URLs
-- Namenode: http://localhost:9870
-- History server: http://localhost:8188
-- Datanode: http://localhost:9864
-- Nodemanager: http://localhost:8042
-- Resource manager: http://localhost:8088
-- Master: http://localhost:8080
-- Worker: http://localhost:8081
+- HDFS UI: http://localhost:9870
+- Spark UI: http://localhost:8080
 
 
 ## Run on Docker
 ```bash
-> docker exec -it nids-master bash
+> docker exec -it spark-master-1 bash
 ```
 
 ### Example #1 - hdfs
 ```bash
-mkdir /opt/data
-wget <url> -P /opt/data
-bash-4.2$ hdfs dfs -put /opt/data/<filename> /<filename>
-bash-4.2$ hdfs dfs -ls /
+> docker exec -it hdfs-namenode-1 bash
+bash-4.2$ hadoop fs -mkdir -p /user/spark/
+bash-4.2$ hadoop fs -chown spark:spark /user/spark
+
+bash-4.2$ wget <url>
+...
+bash-4.2$ hdfs dfs -put <filename> /user/spark/
+bash-4.2$ hdfs dfs -ls /user/spark/
 ```
 
 ### Example #2 - pyspark
 ```bash
-bash-4.2$ /opt/spark/bin/pyspark --master yarn --name <app_name>
+> docker exec -it spark-master-1 bash
+bash-4.2$ pyspark
 ...
->>> df = spark.read.options(delimiter=',', header=True, inferSchema=True).csv("hdfs:///<filename>")
+>>> df = spark.read.options(delimiter=',', header=True, inferSchema=True).csv("hdfs:///user/spark/<filename>")
 ```
 
