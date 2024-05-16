@@ -3,13 +3,13 @@ datanodes ?= 1
 localN ?= *
 
 # All
-compose-up: create-network up-hdfs up-kafka up-spark
+compose-up: create-network compose-up-hdfs compose-up-kafka compose-up-spark
 
-compose-down: down-spark down-kafka down-hdfs delete-network
+compose-down: compose-down-spark compose-down-kafka compose-down-hdfs delete-network
 
-compose-start: start-hdfs up-kafka start-spark
+compose-start: compose-start-hdfs compose-start-kafka compose-start-spark
 
-compose-stop: stop-spark stop-kafka stop-hdfs
+compose-stop: compose-stop-spark compose-stop-kafka compose-stop-hdfs
 
 
 # Network
@@ -21,24 +21,34 @@ delete-network:
 # HDFS
 build-hdfs:
 	docker build -t nids/hdfs ./docker/hdfs
-up-hdfs: 
+compose-up-hdfs: 
 	docker-compose -f ./infra/hdfs/compose.yml up --scale datanode=${datanodes} -d
-down-hdfs: 
+compose-down-hdfs: 
 	docker-compose -f ./infra/hdfs/compose.yml down --volumes
-start-hdfs: 
+compose-start-hdfs: 
 	docker-compose -f ./infra/hdfs/compose.yml start
-stop-hdfs: 
+compose-stop-hdfs: 
 	docker-compose -f ./infra/hdfs/compose.yml stop
 
 # Spark
-up-spark: 
+compose-up-spark: 
 	docker-compose -f ./infra/spark/compose.yml up --scale worker=${workers} -d
-down-spark: 
+compose-down-spark: 
 	docker-compose -f ./infra/spark/compose.yml down --volumes
-start-spark: 
+compose-start-spark: 
 	docker-compose -f ./infra/spark/compose.yml start
-stop-spark: 
+compose-stop-spark: 
 	docker-compose -f ./infra/spark/compose.yml stop
+
+# Kafka
+compose-up-kafka: 
+	docker-compose -f ./infra/kafka/compose.yml up -d
+compose-down-kafka: 
+	docker-compose -f ./infra/kafka/compose.yml down --volumes
+compose-start-kafka: 
+	docker-compose -f ./infra/kafka/compose.yml start
+compose-stop-kafka: 
+	docker-compose -f ./infra/kafka/compose.yml stop
 
 # spark-submit
 kafka-submit:
@@ -49,13 +59,3 @@ local-submit:
 	docker exec spark-master-1 spark-submit --master local[${localN}] ./apps/$(app)
 submit:
 	docker exec spark-master-1 spark-submit ./apps/$(app)
-
-# Kafka
-up-kafka: 
-	docker-compose -f ./infra/kafka/compose.yml up -d
-down-kafka: 
-	docker-compose -f ./infra/kafka/compose.yml down --volumes
-start-kafka: 
-	docker-compose -f ./infra/kafka/compose.yml start
-stop-kafka: 
-	docker-compose -f ./infra/kafka/compose.yml stop
