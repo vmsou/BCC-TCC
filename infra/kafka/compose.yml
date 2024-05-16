@@ -36,9 +36,13 @@ services:
       - nids_network
 
     volumes:
-      - ${PWD}/infra/kafka/producers:/usr/src/producers
+      - ${PWD}/infra/kafka/producers/:/app/producers/
+      - ${PWD}/data/:/app/data/
 
-    command: python producers/csv_producer.py --servers ${KAFKA_SERVER_HOST}:${KAFKA_SERVER_PORT} --topic random_csv1
+    command: python producers/dataset_producer.py --servers ${KAFKA_SERVER_HOST}:${KAFKA_SERVER_PORT} --dataset data/NF-UNSW-NB15-v2.parquet --output-type csv --topic netv2  
+
+    profiles:
+      - donotstart
 
   consumer:
     image: 'bitnami/kafka:3.6.2'
@@ -52,5 +56,8 @@ services:
     volumes:
       - ${PWD}/infra/kafka/config/:/opt/bitnami/kafka/config/
 
-    command: kafka-console-consumer.sh --bootstrap-server ${KAFKA_SERVER_HOST}:${KAFKA_SERVER_PORT} --topic random_csv1 --from-beginning
+    command: kafka-console-consumer.sh --bootstrap-server ${KAFKA_SERVER_HOST}:${KAFKA_SERVER_PORT} --topic netv2 --from-beginning
+
+    profiles:
+      - donotstart
 
