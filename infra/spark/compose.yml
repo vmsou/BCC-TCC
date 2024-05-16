@@ -20,12 +20,14 @@ services:
       - nids_network
 
     ports:
-      - ${SPARK_UI_PORT}:8080
+      - ${SPARK_MASTER_UI_PORT}:8080
       - ${SPARK_MASTER_PORT}:7077
+      - ${SPARK_UI_PORT}:4040
 
     volumes:
     - ${PWD}/infra/spark/apps/:/opt/bitnami/spark/apps/
     - ${PWD}/infra/spark/conf/:/opt/bitnami/spark/conf/
+    - ${PWD}/data/:/opt/bitnami/spark/data/
 
   worker:
     image: nids/spark
@@ -42,7 +44,6 @@ services:
 
     volumes:
     - ${PWD}/infra/spark/conf/:/opt/bitnami/spark/conf/
-    - ${PWD}/infra/spark/data/:/opt/bitnami/spark/data/
 
     networks:
       - nids_network
