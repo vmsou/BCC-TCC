@@ -18,6 +18,7 @@ services:
 
     volumes:
       - ${PWD}/infra/hdfs/hadoop/:/opt/hadoop/etc/hadoop/
+      - ${PWD}/data/:/opt/hadoop/data/
 
     networks:
       - nids_network
