@@ -9,12 +9,22 @@ from pyspark.sql.types import StructType
 
 
 def parse_arguments():
+    # kafka-predictions.py -s kafka:9092 -t NetV2 -m models/DTC_NETV2_MODEL --schema schemas/NetV2_schema.json
     parser = argparse.ArgumentParser(description="KafkaPredictions")
     parser.add_argument("-s", "--servers", nargs="+", help="kafka.bootstrap.servers (i.e. <ip1>:<host1> <ip2>:<host2> ... <ipN>:<hostN>)", default=["kafka:9092"])
     parser.add_argument("-t", "--topic", help="Kafka Topic (i.e. topic1)", default="NetV2")
     parser.add_argument("-m", "--model", help="Path to Model", default="models/DecisionTreeClassifier_NF-UNSW-NB15-v2_MODEL")
     parser.add_argument("--schema", help="Path to Schema JSON", default="schemas/NetV2_schema.json")
     return parser.parse_args()
+
+
+def create_session() -> SparkSession:
+    # .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0") \
+    spark: SparkSession = SparkSession.builder \
+                    .appName("NetV2Predictions") \
+                    .config("spark.cores.max", '1') \
+                    .getOrCreate()
+    return spark
 
 
 def spark_schema_from_json(spark: SparkSession, path: str) -> StructType:
@@ -29,12 +39,7 @@ def main() -> None:
     model_path: str = args.model
     schema_path: str = args.schema
 
-    #.config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0") \
-    spark: SparkSession = SparkSession.builder \
-                        .appName("NetV2Predictions") \
-                        .config("spark.cores.max", '3') \
-                        .getOrCreate()
-    
+    spark = create_session()
     sc: SparkContext = spark.sparkContext
     sc.setLogLevel("WARN")
 
@@ -51,15 +56,11 @@ def main() -> None:
         .option("startingOffsets", "earliest") \
         .load()
 
+    # .selectExpr(f"from_csv(value, '{schema.simpleString()}') AS features")
     features = df \
             .selectExpr("CAST(value AS STRING)") \
             .select(F.from_csv("value", schema.simpleString()).alias("features")) \
             .select("features.*")
-
-    # features = df \
-    #     .selectExpr("CAST(value AS STRING) AS value") \
-    #     .selectExpr(f"from_csv(value, '{schema.simpleString()}') AS features") \
-    #     .select("features.*")
 
     predictions = model.transform(features).select("features", "prediction", "probability")
 
@@ -69,8 +70,6 @@ def main() -> None:
             .outputMode("append") \
             .start()
     query.awaitTermination()
-
-    spark.close()
 
 
 if __name__ == "__main__":

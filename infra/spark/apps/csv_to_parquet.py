@@ -18,9 +18,10 @@ def main():
     file_path = Path(source)
     output_path = (Path(output) / file_path.name).with_suffix(".parquet")
 
-    spark = SparkSession.builder.appName("CSVtoParquet").getOrCreate()
+    spark: SparkSession = SparkSession.builder.appName("CSVtoParquet").getOrCreate()
     df = spark.read.options(delimiter=',', header=True, inferSchema=True).csv(str(file_path))
     df.write.mode("overwrite").parquet(str(output_path))
+
 
 if __name__ == "__main__":
     main()
