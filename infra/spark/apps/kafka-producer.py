@@ -2,8 +2,9 @@
 
 import argparse
 import json
+import os
+import sys
 import time
-from pathlib import Path
 
 import pyspark.sql.functions as F
 from pyspark.sql import SparkSession, DataFrame
@@ -13,70 +14,109 @@ from pyspark.sql.types import StructType
 def parse_arguments():
     # kafka-producer.py -d datasets/NF-UNSW-NB15-v2.parquet --schema schemas/NetV2_schema.json --topic NetV2 -n 10 --delay 1
     parser = argparse.ArgumentParser(description="CSV Producer")
+    parser.add_argument("-s", "--servers", nargs="+", help="kafka.bootstrap.servers: host1:port1 host2:port2 ...)", default=["kafka:9092"])
+    parser.add_argument("-t", "--topic", help="Topic name", default="NetV2")
+    parser.add_argument("-f", "--format", help="Message format (csv, json)", default="csv", choices=["csv", "json"])
     parser.add_argument("-d", "--dataset", help="Data Source", default="datasets/NF-UNSW-NB15-v2.parquet")
     parser.add_argument("--schema", help="Path to Schema JSON", default="schemas/NetV2_schema.json")
-    parser.add_argument("-s", "--servers", nargs="+", help="bootstrap_servers (i.e. <ip1>:<host1> <ip2>:<host2> ... <ipN>:<hostN>)", default=["localhost:9092"])
-    parser.add_argument("-t", "--topic", help="Topic name", default="NetV2")
-    parser.add_argument("--output-type", help="Send message type (i.e., csv, ...)", default="csv", choices=["csv"])
-    parser.add_argument("-n", help="Total number of rows (-1 for all)", default=-1, type=int)
+    parser.add_argument("-n", help="Total number of rows (0 for all)", default=0, type=int)
     parser.add_argument("--delay", help="Seconds of delay for each row to be sent", default=1, type=int)
+    parser.add_argument("--seed", help="Seed", default=42, type=int)
     return parser.parse_args()
 
 
+def create_session():
+    # .config("spark.cores.max", '1') \
+    name = " ".join([os.path.basename(sys.argv[0])] + sys.argv[1:])
+    spark: SparkSession = SparkSession \
+        .builder \
+        .appName(name) \
+        .config("spark.sql.debug.maxToStringFields", '100') \
+        .getOrCreate()
+    return spark
+
+
+def get_stream_df(spark: SparkSession, path: str, schema: StructType):
+    dataset_ext = os.path.basename(path).split(".")[-1]
+    if dataset_ext == "csv": return spark.readStream.schema(schema).csv(path)
+    elif dataset_ext == "parquet": return spark.readStream.schema(schema).parquet(path)
+    else: raise Exception(f"File type: '{dataset_ext}' not supported for file '{path}'.")
+
+
 def spark_schema_from_json(spark: SparkSession, path: str) -> StructType:
-    schema_json = spark.read.text(path).first()[0]
-    return StructType.fromJson(json.loads(schema_json))
+    schema_json = json.loads(spark.read.text(path).first()[0])
+    return StructType.fromJson({"fields": schema_json["fields"]})
 
 
 def main():
     args = parse_arguments()
-    dataset: str = args.dataset
-    schema_path: str = args.schema
-    dataset_ext = Path(dataset).suffix
-    servers: list = ",".join(args.servers)
-    topic: str = args.topic
-    output_type = args.output_type
+    DATASET_PATH: str = args.dataset
+    SCHEMA_PATH: str = args.schema
+    SERVERS: list = ",".join(args.servers)
+    TOPIC: str = args.topic
+    FORMAT = args.format
     N: int = args.n
-    delay: int = args.delay
+    DELAY: int = args.delay
+    SEED: int = args.seed
 	
     print("[ CONF ]".center(50, "-"))
-    print("Dataset:", dataset)
-    print("Schema Path:", schema_path)
-    print("Servers:", servers)
-    print("Topic:", topic)
-    print("Output Type:", output_type)
+    print("DATASET_PATH:", DATASET_PATH)
+    print("SCHEMA_PATH:", SCHEMA_PATH)
+    print("SERVERS:", SERVERS)
+    print("TOPIC:", TOPIC)
+    print("FORMAT:", FORMAT)
     print("N:", N)
-    print("delay:", delay)
+    print("DELAY:", DELAY)
+    print()
 
-    spark: SparkSession = SparkSession.builder \
-        .appName("RandomRowKafkaWriter") \
-        .config("spark.cores.max", '1') \
-        .getOrCreate()
-                            
-    df: DataFrame = None
-    schema = spark_schema_from_json(spark, schema_path)
-    if dataset_ext == ".csv": df = spark.readStream.schema(schema).csv(dataset)
-    elif dataset_ext == ".parquet": df = spark.readStream.schema(schema).parquet(dataset)
-    else: raise Exception(f"File type: {dataset_ext} not supported.")
-    schema = df.schema
+    spark = create_session()        
 
-    def write_row(df: DataFrame, df_id):
-        for row in df.collect():
+    print(" [SCHEMA] ".center(50, "-"))
+    print(f"Loading {SCHEMA_PATH}...")
+
+    t0 = time.time()
+    schema = spark_schema_from_json(spark, SCHEMA_PATH)
+    t1 = time.time()
+
+    #for field in schema.jsonValue()["fields"]:
+    #    print(f"{field['name']}: {field['type']}")
+    print(schema.simpleString())
+    
+    print(f"OK. Loaded in {t1 - t0}s")
+    print()
+
+    
+    print(" [DATASET STREAM] ".center(50, "-"))
+    t0 = time.time()
+    df = get_stream_df(spark, DATASET_PATH, schema)
+    t1 = time.time()
+    print(f"OK. Loaded in {t1 - t0}s")
+    print()
+
+    format_expr: str = None
+    if FORMAT == "csv": format_expr = "CAST(concat_ws(',', *) AS STRING) AS value"
+    elif FORMAT == "json": format_expr = "to_json(struct(*)) AS value"
+    else: raise Exception(f"Message format not supported: {FORMAT}")
+
+    def write_row(batch_df: DataFrame, batch_id: int):
+        for row in batch_df.collect():
+            print("Sending:", ",".join(map(str, row.asDict().values())), '\n')
             row_df = spark.createDataFrame([row], schema=schema)
-            row_df.selectExpr("CAST(concat_ws(',', *) AS STRING) AS value") \
+            row_df.selectExpr(format_expr) \
                 .write \
                 .format("kafka") \
-                .option("kafka.bootstrap.servers", servers) \
-                .option("topic", topic) \
+                .option("kafka.bootstrap.servers", SERVERS) \
+                .option("topic", TOPIC) \
                 .save()
-            time.sleep(delay)
+            time.sleep(DELAY)
 
-    rand_df = df.orderBy(F.rand())
+    rand_df = df.orderBy(F.rand(SEED))  # TODO: Fix - Not randomizing stream
     if N > 0: rand_df = df.limit(int(N))
-
+    
+    print(" [KAFKA] ".center(50, "-"))
     query = rand_df \
             .writeStream \
-            .queryName("CSV Kafka Writer") \
+            .queryName("Kafka Row Writer") \
             .foreachBatch(write_row) \
             .outputMode("append") \
             .trigger(once=True) \
