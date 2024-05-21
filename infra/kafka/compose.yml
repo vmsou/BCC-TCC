@@ -6,7 +6,7 @@ networks:
 
 services:
   server:
-    hostname: ${KAFKA_SERVER_HOST}
+    hostname: kafka  # ${KAFKA_SERVER_HOST}
     image: 'bitnami/kafka:3.6.2'
  
     environment:
@@ -14,7 +14,7 @@ services:
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@${KAFKA_SERVER_HOST}:9093
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093  # 0${KAFKA_SERVER_HOST}:9093
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
 
@@ -22,42 +22,4 @@ services:
       - nids_network
 
     ports:
-     - ${KAFKA_SERVER_PORT}:9092
-
-  producer:
-    pull_policy: never
-    build: ${PWD}/docker/kafka/producer
-    image: nids/producer
-
-    depends_on:
-      - server
-
-    networks:
-      - nids_network
-
-    volumes:
-      - ${PWD}/infra/kafka/producers/:/app/producers/
-      - ${PWD}/data/:/app/data/
-
-    command: python producers/dataset_producer.py --servers ${KAFKA_SERVER_HOST}:${KAFKA_SERVER_PORT} --dataset data/NF-UNSW-NB15-v2.parquet --output-type csv --topic netv2  
-
-    profiles:
-      - donotstart
-
-  consumer:
-    image: 'bitnami/kafka:3.6.2'
-
-    depends_on:
-      - producer
-
-    networks:
-      - nids_network
-
-    volumes:
-      - ${PWD}/infra/kafka/config/:/opt/bitnami/kafka/config/
-
-    command: kafka-console-consumer.sh --bootstrap-server ${KAFKA_SERVER_HOST}:${KAFKA_SERVER_PORT} --topic netv2 --from-beginning
-
-    profiles:
-      - donotstart
-
+     - ${KAFKA_SERVER_PORT}:9092  # ${KAFKA_SERVER_PORT}:9092
