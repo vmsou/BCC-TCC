@@ -16,7 +16,7 @@ def parse_arguments():
     parent_parser = argparse.ArgumentParser(prog="create-model", add_help=False)
 
     parent_parser.add_argument("-s", "--setup", help="Path to Setup Folder", required=True)
-    # parent_parser.add_argument("--schema", help="Path to Schema JSON", default="schemas/NetV2_schema.json")
+    parent_parser.add_argument("--schema", help="Path to Schema JSON", required=False)
     parent_parser.add_argument("-d", "--dataset", help="Path to Dataset", required=True)
     parent_parser.add_argument("-m", "--model", help="Path to Output Model", required=True)
 
@@ -43,7 +43,7 @@ def create_session():
 
 def spark_schema_from_json(spark: SparkSession, path: str) -> StructType:
     schema_json = json.loads(spark.read.text(path).first()[0])
-    return StructType.fromJson({"fields": schema_json["fields"]})
+    return StructType.fromJson(schema_json)
 
 
 def main():    
@@ -51,13 +51,13 @@ def main():
     COMMAND = args.command
     SETUP_PATH = args.setup
     DATASET_PATH = args.dataset
-    # SCHEMA_PATH = args.schema
+    SCHEMA_PATH = args.schema
     MODEL_PATH = args.model
 
     print(" [CONF] ".center(50, "-"))
     print("COMMAND:", COMMAND)
     print("SETUP_PATH:", SETUP_PATH)
-    # print("SCHEMA_PATH:", DATASET_PATH)
+    print("SCHEMA_PATH:", SCHEMA_PATH)
     print("DATASET_PATH:", DATASET_PATH)
     print("MODEL_PATH:", MODEL_PATH)
     print()
@@ -85,22 +85,23 @@ def main():
     print("FEATURES:", features)
     print()
 
-    # print(" [SCHEMA] ".center(50, "-"))
-    # print(f"Loading {SCHEMA_PATH}...")
+    schema = None
+    if SCHEMA_PATH:
+        print(" [SCHEMA] ".center(50, "-"))
+        print(f"Loading {SCHEMA_PATH}...")
 
-    # t0 = time.time()
-    # schema = spark_schema_from_json(spark, SCHEMA_PATH)
-    # t1 = time.time()
+        t0 = time.time()
+        schema = spark_schema_from_json(spark, SCHEMA_PATH)
+        t1 = time.time()
 
-    # for field in schema.jsonValue()["fields"]:
-        # print(f"{field['name']}: {field['type']}")
-    # print(schema.simpleString())
-    # print()
+        # for field in schema.fields:  print(f"{field.name}: {field.typeName()}")
+        print(schema.simpleString())
+        print()
 
     print(" [DATASET] ".center(50, "-"))
     print(f"Loading {DATASET_PATH}...")
     t0 = time.time()
-    train_df = spark.read.parquet(DATASET_PATH)
+    train_df = spark.read.schema(schema).parquet(DATASET_PATH) if schema else spark.read.parquet(DATASET_PATH)
     t1 = time.time()
     print(f"OK. Loaded in {t1 - t0}s")
     print()
