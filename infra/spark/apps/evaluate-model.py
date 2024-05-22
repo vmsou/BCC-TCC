@@ -1,10 +1,12 @@
 import argparse
+import json
 import os
 import sys
 import time
 
 import pyspark.sql.functions as F
 from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.types import StructType
 from pyspark.ml import PipelineModel
 from pyspark.ml.base import Model
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator
@@ -16,10 +18,16 @@ def parse_arguments():
     # evaluate-model.py -m models/UNSW_DTC_CV_PR_AUC -d datasets/NF-UNSW-NB15-v2.parquet
     parser = argparse.ArgumentParser(prog="evaluate-model", description="Evaluates a Model. Expects a PipelineModel")
     parser.add_argument("-m", "--model", help="Path to Model (Input)", default="models/UNNAMED_MODEL")
+    parser.add_argument("--schema", help="Path to Schema JSON", required=False)
     parser.add_argument("-d", "--dataset", help="Path to Dataset", default="datasets/NF-UNSW-NB15-v2.parquet", required=True)
     parser.add_argument("--test-ratio", type=float, help="Ratio for test (0.0 to 1.0)", default=1.0)
     parser.add_argument("--seed", type=float, help="Seed Number", default=42)
     return parser.parse_args()
+
+
+def spark_schema_from_json(spark: SparkSession, path: str) -> StructType:
+    schema_json = json.loads(spark.read.text(path).first()[0])
+    return StructType.fromJson(schema_json)
 
 
 def create_session():
@@ -90,12 +98,14 @@ def show_multiclass_metrics(predictions, target):
 
 def main():    
     args = parse_arguments()
+    SCHEMA_PATH = args.schema
     DATASET_PATH = args.dataset
     MODEL_PATH = args.model
     TEST_RATIO = args.test_ratio
     SEED = args.seed
 
     print(" [CONF] ".center(50, "-"))
+    print("SCHEMA_PATH:", SCHEMA_PATH)
     print("MODEL_PATH:", MODEL_PATH)
     print("DATASET_PATH:", DATASET_PATH)
     print("TEST_RATIO:", TEST_RATIO)
@@ -120,10 +130,23 @@ def main():
     show_features_importances(model, features)
     print()
 
+    schema = None
+    if SCHEMA_PATH:
+        print(" [SCHEMA] ".center(50, "-"))
+        print(f"Loading {SCHEMA_PATH}...")
+
+        t0 = time.time()
+        schema = spark_schema_from_json(spark, SCHEMA_PATH)
+        t1 = time.time()
+
+        # for field in schema.fields:  print(f"{field.name}: {field.typeName()}")
+        print(schema.simpleString())
+        print()
+
     print(" [DATASET] ".center(50, "-"))
     print(f"Loading {DATASET_PATH}")
     t0 = time.time()
-    df = spark.read.parquet(DATASET_PATH)
+    df = spark.read.schema(schema).parquet(DATASET_PATH) if schema else spark.read.parquet(DATASET_PATH)
     t1 = time.time()
     print(f"OK. Loaded in {t1 - t0}s")
     print()
