@@ -39,6 +39,13 @@ def spark_schema_from_json(spark: SparkSession, path: str) -> StructType:
     return StructType.fromJson({"fields": schema_json["fields"]})
 
 
+def get_conditions_from_schema(schema: StructType) -> list[F.Column]:
+    conditions = []
+    for field in schema.fields:
+        if not field.nullable: conditions.append(F.col(field.name).isNotNull())
+    return conditions
+
+
 def main() -> None:
     args = parse_arguments()
     BROKERS: str = ",".join(args.brokers)
@@ -83,6 +90,7 @@ def main() -> None:
     t0 = time.time()
     schema = spark_schema_from_json(spark, SCHEMA_PATH)
     t1 = time.time()
+    conditions = get_conditions_from_schema(schema)
 
     # for field in schema.jsonValue()["fields"]:
         # print(f"{field['name']}: {field['type']}")
@@ -112,9 +120,11 @@ def main() -> None:
         .selectExpr("CAST(value AS STRING)") \
         .select(format_func.alias("features")) \
         .select("features.*")
+    
+    valid_features = features.filter(F.expr(" AND ".join([c._jc.toString() for c in conditions])))
 
     print(" [PREDICTIONS] ".center(50, "-"))
-    predictions = model.transform(features).select(features_col, prediction_col, "probability")
+    predictions = model.transform(valid_features).select(features_col, prediction_col, "probability")
 
     query = predictions.writeStream \
         .queryName("Predictions Writer") \
