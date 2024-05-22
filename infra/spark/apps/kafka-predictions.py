@@ -12,9 +12,9 @@ from pyspark.sql.types import StructType
 
 
 def parse_arguments():
-    # kafka-predictions.py -s kafka:9092 -t NetV2 -m models/DTC_NETV2_MODEL --schema schemas/NetV2_schema.json
+    # kafka-predictions.py -b kafka:9092 -t NetV2 -m models/DTC_NETV2_MODEL --schema schemas/NetV2_schema.json
     parser = argparse.ArgumentParser(description="KafkaPredictions")
-    parser.add_argument("-s", "--servers", nargs="+", help="kafka.bootstrap.servers (i.e. <ip1>:<host1> <ip2>:<host2> ... <ipN>:<hostN>)", default=["kafka:9092"])
+    parser.add_argument("-b", "--brokers", nargs="+", help="kafka.bootstrap.servers (i.e. <ip1>:<host1> <ip2>:<host2> ... <ipN>:<hostN>)", required=True)
     parser.add_argument("-t", "--topic", help="Kafka Topic (i.e. topic1)", required=True)
     parser.add_argument("-m", "--model", help="Path to Model", required=True)
     parser.add_argument("-f", "--format", help="Format of data sent by topic", default="csv", choices=["csv", "json"])
@@ -41,7 +41,7 @@ def spark_schema_from_json(spark: SparkSession, path: str) -> StructType:
 
 def main() -> None:
     args = parse_arguments()
-    SERVERS: str = ",".join(args.servers)
+    BROKERS: str = ",".join(args.brokers)
     TOPIC: str = args.topic
     MODEL_PATH: str = args.model
     SCHEMA_PATH: str = args.schema
@@ -49,7 +49,7 @@ def main() -> None:
 
     print()
     print(" [CONF] ".center(50, "-"))
-    print("SERVERS:", SERVERS)
+    print("BROKERS:", BROKERS)
     print("TOPIC:", TOPIC)
     print("MODEL_PATH:", MODEL_PATH)
     print("SCHEMA_PATH:", SCHEMA_PATH)
@@ -61,7 +61,7 @@ def main() -> None:
     sc.setLogLevel("WARN")
 
     print(" [MODEL] ".center(50, "-"))
-    print(f"Loading {MODEL_PATH}...")
+    print(f"Loading '{MODEL_PATH}'...")
 
     t0 = time.time()
     model = PipelineModel.load(MODEL_PATH)
@@ -78,7 +78,7 @@ def main() -> None:
     print()
 
     print(" [SCHEMA] ".center(50, "-"))
-    print(f"Loading {SCHEMA_PATH}...")
+    print(f"Loading '{SCHEMA_PATH}'...")
 
     t0 = time.time()
     schema = spark_schema_from_json(spark, SCHEMA_PATH)
@@ -96,7 +96,7 @@ def main() -> None:
     df = spark \
         .readStream \
         .format("kafka") \
-        .option("kafka.bootstrap.servers", SERVERS) \
+        .option("kafka.bootstrap.servers", BROKERS) \
         .option("subscribe", TOPIC) \
         .option("startingOffsets", "earliest") \
         .load()

@@ -14,11 +14,11 @@ from pyspark.sql.types import StructType
 def parse_arguments():
     # kafka-producer.py -d datasets/NF-UNSW-NB15-v2.parquet --schema schemas/NetV2_schema.json --topic NetV2 -n 10 --delay 1
     parser = argparse.ArgumentParser(description="CSV Producer")
-    parser.add_argument("-s", "--servers", nargs="+", help="kafka.bootstrap.servers: host1:port1 host2:port2 ...)", default=["kafka:9092"])
-    parser.add_argument("-t", "--topic", help="Topic name", default="NetV2")
+    parser.add_argument("-b", "--brokers", nargs="+", help="kafka.bootstrap.servers: host1:port1 host2:port2 ...)", required=True)
+    parser.add_argument("-t", "--topic", help="Topic name", required=True)
     parser.add_argument("-f", "--format", help="Message format (csv, json)", default="csv", choices=["csv", "json"])
-    parser.add_argument("-d", "--dataset", help="Data Source", default="datasets/NF-UNSW-NB15-v2.parquet")
-    parser.add_argument("--schema", help="Path to Schema JSON", default="schemas/NetV2_schema.json")
+    parser.add_argument("-d", "--dataset", help="Data Source", required=True)
+    parser.add_argument("--schema", help="Path to Schema JSON", required=True)
     parser.add_argument("-n", help="Total number of rows (0 for all)", default=0, type=int)
     parser.add_argument("--delay", help="Seconds of delay for each row to be sent", default=1, type=int)
     parser.add_argument("--seed", help="Seed", default=42, type=int)
@@ -52,7 +52,7 @@ def main():
     args = parse_arguments()
     DATASET_PATH: str = args.dataset
     SCHEMA_PATH: str = args.schema
-    SERVERS: list = ",".join(args.servers)
+    BROKERS: list = ",".join(args.brokers)
     TOPIC: str = args.topic
     FORMAT = args.format
     N: int = args.n
@@ -62,7 +62,7 @@ def main():
     print("[ CONF ]".center(50, "-"))
     print("DATASET_PATH:", DATASET_PATH)
     print("SCHEMA_PATH:", SCHEMA_PATH)
-    print("SERVERS:", SERVERS)
+    print("SERVERS:", BROKERS)
     print("TOPIC:", TOPIC)
     print("FORMAT:", FORMAT)
     print("N:", N)
@@ -105,7 +105,7 @@ def main():
             row_df.selectExpr(format_expr) \
                 .write \
                 .format("kafka") \
-                .option("kafka.bootstrap.servers", SERVERS) \
+                .option("kafka.bootstrap.servers", BROKERS) \
                 .option("topic", TOPIC) \
                 .save()
             time.sleep(DELAY)
