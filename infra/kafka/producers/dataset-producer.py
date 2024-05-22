@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 import argparse
-import json
 import random
 import time
 from pathlib import Path
 
 import pandas
 from kafka import KafkaProducer
+
 
 def parse_arguments():
 	parser = argparse.ArgumentParser(description="CSV Producer")
@@ -36,32 +36,31 @@ def main():
 	time.sleep(5)
 	producer = KafkaProducer(bootstrap_servers=servers, max_block_ms=5000)
 
+	df: pandas.DataFrame = None
 	if dataset_ext == ".csv": df = pandas.read_csv(dataset)
 	elif dataset_ext == ".parquet": df = pandas.read_parquet(dataset)
 	else: raise Exception(f"File type: {dataset_ext} not supported.")
 
 	if drop_columns: df.drop(columns=drop_columns, inplace=True)
 
-	def get_random_row_csv():
-		idx = random.randint(0, len(df) - 1)
-		return ",".join(map(str, df.iloc[idx].values))
+	def get_row_csv(row: int):
+		return ",".join([str(x) for x in df.iloc[row].values])  # or:df.iloc[idx].to_csv(header=False, index=False, sep=',', lineterminator=',')
 
-	def get_random_row_json():
-		idx = random.randint(0, len(df) - 1)
-		return df.iloc[idx].to_json()
+	def get_row_json(row: int):
+		return df.iloc[row].to_json()
 	
-	output_func = None
+	get_row_func = None
 
-	if output_type == "csv": output_func = get_random_row_csv
-	elif output_type == "json": output_func = get_random_row_json
+	if output_type == "csv": get_row_func = get_row_csv
+	elif output_type == "json": get_row_func = get_row_json
+	else: raise Exception(f"Output type: {output_type} not supported.")
 	
 	while True:
-		row_json = output_func()
-		msg = row_json
+		raw_msg = get_row_func(random.randint(0, len(df) - 1))
 
 		# send to Kafka topic
-		print(f"{topic} << {msg}")
-		producer.send(topic, msg.encode("utf-8"))
+		print(f"{topic} << {raw_msg}")
+		producer.send(topic, raw_msg.encode("utf-8"))
 		time.sleep(1)
 
 
