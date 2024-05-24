@@ -98,9 +98,15 @@ def main():
     elif FORMAT == "json": format_expr = "to_json(struct(*)) AS value"
     else: raise Exception(f"Message format not supported: {FORMAT}")
 
+    batch_count = 0
     def write_row(batch_df: DataFrame, batch_id: int):
-        for row in batch_df.collect():
-            print("Sending:", ",".join(map(str, row.asDict().values())), '\n')
+        nonlocal batch_count
+
+        batch_count += 1
+        rows = batch_df.collect()
+        print(f"Batch: {batch_count}")
+        for row in rows:
+            print(",".join(map(str, row.asDict().values())), '\n')
             row_df = spark.createDataFrame([row], schema=schema)
             row_df.selectExpr(format_expr) \
                 .write \
