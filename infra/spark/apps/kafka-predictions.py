@@ -16,9 +16,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="KafkaPredictions")
     parser.add_argument("-b", "--brokers", nargs="+", help="kafka.bootstrap.servers (i.e. <ip1>:<host1> <ip2>:<host2> ... <ipN>:<hostN>)", required=True)
     parser.add_argument("-t", "--topic", help="Kafka Topic (i.e. topic1)", required=True)
-    parser.add_argument("-m", "--model", help="Path to Model", required=True)
     parser.add_argument("-f", "--format", help="Format of data sent by topic", default="csv", choices=["csv", "json"])
     parser.add_argument("--schema", help="Path to Schema JSON", default="schemas/NetV2_schema.json", required=True)
+    parser.add_argument("model", help="Path to Model")
     return parser.parse_args()
 
 
