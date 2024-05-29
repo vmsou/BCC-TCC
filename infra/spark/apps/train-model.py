@@ -12,13 +12,13 @@ from pyspark.ml.tuning import CrossValidator
 Estimator_t = CrossValidator | Pipeline
 
 def parse_arguments():
-    # create-model.py cross-validator -d datasets/NF-UNSW-NB15-v2.parquet -s setups/SETUP_DTC_NETV2_MODEL_CV -m models/DTC_NETV2_MODEL2
+    # train-model.py cross-validator -d datasets/NF-UNSW-NB15-v2.parquet -s setups/SETUP_DTC_NETV2_MODEL_CV ./models/DTC_NETV2_MODEL2
     parent_parser = argparse.ArgumentParser(prog="create-model", add_help=False)
 
     parent_parser.add_argument("-s", "--setup", help="Path to Setup Folder", required=True)
     parent_parser.add_argument("--schema", help="Path to Schema JSON", required=False)
     parent_parser.add_argument("-d", "--dataset", help="Path to Dataset", required=True)
-    parent_parser.add_argument("-m", "--model", help="Path to Output Model", required=True)
+    parent_parser.add_argument("output", help="Path to Model Output")
 
     main_parser = argparse.ArgumentParser()
     subparser = main_parser.add_subparsers(dest="command", required=True, help="Choose model")
@@ -52,14 +52,14 @@ def main():
     SETUP_PATH = args.setup
     DATASET_PATH = args.dataset
     SCHEMA_PATH = args.schema
-    MODEL_PATH = args.model
+    OUTPUT_PATH = args.output
 
     print(" [CONF] ".center(50, "-"))
     print("COMMAND:", COMMAND)
     print("SETUP_PATH:", SETUP_PATH)
     print("SCHEMA_PATH:", SCHEMA_PATH)
     print("DATASET_PATH:", DATASET_PATH)
-    print("MODEL_PATH:", MODEL_PATH)
+    print("OUTPUT_PATH:", OUTPUT_PATH)
     print()
 
     spark = create_session()
@@ -119,10 +119,11 @@ def main():
     print(model.stages[-1])
     print()
 
-    print(f"Saving model to {MODEL_PATH}...")
-    model.write().overwrite().save(MODEL_PATH)
+    print(f"Saving model to {OUTPUT_PATH}...")
+    model.write().overwrite().save(OUTPUT_PATH)
     print("OK")
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    print(parse_arguments())
