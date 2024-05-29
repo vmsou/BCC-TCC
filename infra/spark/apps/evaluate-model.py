@@ -15,13 +15,13 @@ from pyspark.mllib.evaluation import MulticlassMetrics
 
 
 def parse_arguments():
-    # evaluate-model.py -m models/UNSW_DTC_CV_PR_AUC -d datasets/NF-UNSW-NB15-v2.parquet
+    # evaluate-model.py models/UNSW_DTC_CV_PR_AUC -d datasets/NF-UNSW-NB15-v2.parquet
     parser = argparse.ArgumentParser(prog="evaluate-model", description="Evaluates a Model. Expects a PipelineModel")
-    parser.add_argument("-m", "--model", help="Path to Model (Input)", default="models/UNNAMED_MODEL")
     parser.add_argument("--schema", help="Path to Schema JSON", required=False)
-    parser.add_argument("-d", "--dataset", help="Path to Dataset", default="datasets/NF-UNSW-NB15-v2.parquet", required=True)
+    parser.add_argument("-d", "--dataset", help="Path to Dataset", required=True)
     parser.add_argument("--test-ratio", type=float, help="Ratio for test (0.0 to 1.0)", default=1.0)
     parser.add_argument("--seed", type=float, help="Seed Number", default=42)
+    parser.add_argument("model", help="Path to Model")
     return parser.parse_args()
 
 
