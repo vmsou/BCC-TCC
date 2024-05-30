@@ -18,6 +18,17 @@ docker compose up --scale datanode=3 --scale worker=3 -d
 - Spark Master UI: http://localhost:8080
 - Spark Jobs UI: http://localhost:4040
 
+## Notebooks - Machine Learning
+To prepare your own models, you can use the following links:
+- [Setup Model](https://colab.research.google.com/drive/10v5uXBmioFk7bZeAtYbnHJ6-CS7OSq6U?usp=sharing)
+- [Train Model](https://colab.research.google.com/drive/1V2kn61Jl1Hhnuv0KJpcvR3S6pqYt_2uE?usp=sharing)
+- [Evaluate Model](https://colab.research.google.com/drive/1hrTI9o2uxjBrOD2hzKI_gn3sC5Rap-1Z?usp=sharing)
+
+This "pipeline" enables to save each step of the model for reproducibility. You can also train and evaluate a model inside of the distributed
+infrastructure with spark and hdfs with the apps `train-model.py` and `evaluate-model.py`, but setups files are necessary for these, which can be
+made using the link above.
+
+
 ## Run on Docker
 ```bash
 > docker exec -it spark-master-1 bash
