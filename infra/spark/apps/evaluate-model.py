@@ -152,7 +152,7 @@ def main():
     print()
 
     print(f"Splitting data into TEST: {TEST_RATIO}")
-    _, test_df = df.randomSplit((1 - TEST_RATIO, TEST_RATIO), seed=SEED)
+    test_df = df.sample(TEST_RATIO, seed=SEED)
     print()
 
     print(" [PREDICTIONS] ".center(50, "-"))
