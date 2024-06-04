@@ -12,13 +12,13 @@ from pyspark.ml.tuning import CrossValidator
 Estimator_t = CrossValidator | Pipeline
 
 def parse_arguments():
-    # train-model.py cross-validator -d datasets/NF-UNSW-NB15-v2.parquet -s setups/SETUP_DTC_NETV2_MODEL_CV ./models/DTC_NETV2_MODEL2
+    # train-model.py cross-validator --folds 3 -p 5 -s "setups/SETUP_DTC_NETV2_MODEL_CV" -d "datasets/NF-UNSW-NB15-v2.parquet" -o "models/DTC_NETV2_MODEL2"
     parent_parser = argparse.ArgumentParser(prog="create-model", add_help=False)
 
     parent_parser.add_argument("-s", "--setup", help="Path to Setup Folder", required=True)
     parent_parser.add_argument("--schema", help="Path to Schema JSON", required=False)
     parent_parser.add_argument("-d", "--dataset", help="Path to Dataset", required=True)
-    parent_parser.add_argument("output", help="Path to Model Output")
+    parent_parser.add_argument("-o", "--output", help="Path to Model Output")
 
     main_parser = argparse.ArgumentParser()
     subparser = main_parser.add_subparsers(dest="command", required=True, help="Choose model")
@@ -125,5 +125,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    print(parse_arguments())
+    main()
